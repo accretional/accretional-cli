@@ -2,7 +2,6 @@ package file
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/accretional/accretional-cli/internal/client"
 	pb "github.com/accretional/collector/gen/collector"
@@ -86,28 +85,31 @@ func listStandaloneFiles(cmd *cobra.Command, cl *client.Client, collectionClient
 		return fmt.Errorf("list files failed: %s (code: %d)", resp.Status.Message, resp.Status.Code)
 	}
 
-	// Try to identify file records by attempting to unmarshal as CollectionData
+	// Try to identify file records by checking for _type: "file" in Struct records
 	// This is heuristic-based since we can't filter by ID prefix
 	var files []fileInfo
 	for _, item := range resp.Items {
-		var collectionData pb.CollectionData
-		if err := proto.Unmarshal(item.Value, &collectionData); err == nil {
-			// Successfully unmarshaled as CollectionData - likely a file record
-			if collectionData.Name != "" {
+		var fileStruct structpb.Struct
+		if err := proto.Unmarshal(item.Value, &fileStruct); err == nil {
+			fileMap := fileStruct.AsMap()
+			// Check if this is a file record
+			if fileType, ok := fileMap["_type"].(string); ok && fileType == "file" {
 				filePath := "unknown"
-				// Try to extract path from TypeUrl if available
-				if strings.Contains(item.TypeUrl, "CollectionData") {
-					// We can't get the exact path without the record ID
-					// Show the file name at least
-					filePath = collectionData.Name
+				if pathVal, ok := fileMap["path"].(string); ok {
+					filePath = pathVal
+				} else if nameVal, ok := fileMap["name"].(string); ok {
+					filePath = nameVal
 				}
 				
 				size := 0
-				if data := collectionData.GetData(); data != nil {
-					size = len(data)
-				} else if uri := collectionData.GetUri(); uri != "" {
-					filePath = uri
-					size = -1 // Unknown size for URI references
+				if sizeVal, ok := fileMap["size"].(float64); ok {
+					size = int(sizeVal)
+				} else if dataVal, ok := fileMap["data"]; ok {
+					// Try to determine size from data (base64 string)
+					if dataStr, ok := dataVal.(string); ok {
+						// Approximate size (base64 is ~4/3 of original)
+						size = len(dataStr) * 3 / 4
+					}
 				}
 				
 				files = append(files, fileInfo{
@@ -185,19 +187,32 @@ func listAttachedFiles(cmd *cobra.Command, cl *client.Client, collectionClient p
 		return fmt.Errorf("get file record failed: %s (code: %d)", fileResp.Status.Message, fileResp.Status.Code)
 	}
 
-	// Unmarshal CollectionData
-	var collectionData pb.CollectionData
-	if err := proto.Unmarshal(fileResp.Item.Value, &collectionData); err != nil {
+	// Unmarshal file record (Struct format)
+	var fileStruct structpb.Struct
+	if err := proto.Unmarshal(fileResp.Item.Value, &fileStruct); err != nil {
 		return fmt.Errorf("failed to unmarshal file: %w", err)
 	}
 
+	fileMap := fileStruct.AsMap()
+
 	cmd.Printf("File attached to record %s:\n", listFilesRecordID)
 	cmd.Printf("  File Record ID: %s\n", dataURI)
-	cmd.Printf("  Name: %s\n", collectionData.Name)
-	if data := collectionData.GetData(); data != nil {
-		cmd.Printf("  Size: %d bytes\n", len(data))
-	} else if uri := collectionData.GetUri(); uri != "" {
-		cmd.Printf("  Type: URI reference (%s)\n", uri)
+	
+	if nameVal, ok := fileMap["name"].(string); ok {
+		cmd.Printf("  Name: %s\n", nameVal)
+	}
+	if pathVal, ok := fileMap["path"].(string); ok {
+		cmd.Printf("  Path: %s\n", pathVal)
+	}
+	if sizeVal, ok := fileMap["size"].(float64); ok {
+		cmd.Printf("  Size: %d bytes\n", int(sizeVal))
+	} else if dataVal, ok := fileMap["data"]; ok {
+		switch v := dataVal.(type) {
+		case []byte:
+			cmd.Printf("  Size: %d bytes\n", len(v))
+		case string:
+			cmd.Printf("  Size: %d bytes\n", len(v))
+		}
 	}
 
 	return nil

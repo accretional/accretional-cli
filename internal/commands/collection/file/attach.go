@@ -1,6 +1,7 @@
 package file
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -69,17 +70,26 @@ func runAttachFile(cmd *cobra.Command, args []string) error {
 	}
 	defer cl.Close()
 
-	// Step 1: Store the file as a record
-	collectionData := &pb.CollectionData{
-		Name: fileName,
-		Content: &pb.CollectionData_Data{
-			Data: fileData,
-		},
+	// Step 1: Store the file as a record (using Struct format to match collection type)
+	fileRecord := map[string]interface{}{
+		"_type":    "file",
+		"name":     fileName,
+		"path":     attachFilePath,
+		"size":     len(fileData),
+		"data":     base64.StdEncoding.EncodeToString(fileData), // Base64 encode for JSON storage
+		"mimeType": "", // Could detect MIME type if needed
 	}
 
-	anyValue, err := anypb.New(collectionData)
+	// Convert to protobuf Struct
+	structValue, err := structpb.NewStruct(fileRecord)
 	if err != nil {
-		return fmt.Errorf("failed to create Any from CollectionData: %w", err)
+		return fmt.Errorf("failed to create Struct: %w", err)
+	}
+
+	// Create Any from Struct
+	anyValue, err := anypb.New(structValue)
+	if err != nil {
+		return fmt.Errorf("failed to create Any from Struct: %w", err)
 	}
 
 	fileRecordID := fmt.Sprintf("_file:%s", attachFilePath)

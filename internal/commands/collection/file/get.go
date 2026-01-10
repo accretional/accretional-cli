@@ -1,6 +1,7 @@
 package file
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	pb "github.com/accretional/collector/gen/collector"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var (
@@ -72,31 +74,51 @@ func runGetFile(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("get file failed: %s (code: %d)", resp.Status.Message, resp.Status.Code)
 	}
 
-	// Unmarshal CollectionData from Any
-	var collectionData pb.CollectionData
-	if err := proto.Unmarshal(resp.Item.Value, &collectionData); err != nil {
-		return fmt.Errorf("failed to unmarshal CollectionData: %w", err)
+	// Unmarshal Struct from Any
+	var fileStruct structpb.Struct
+	if err := proto.Unmarshal(resp.Item.Value, &fileStruct); err != nil {
+		return fmt.Errorf("failed to unmarshal file record: %w", err)
 	}
+
+	fileMap := fileStruct.AsMap()
 
 	// Extract file data
 	var fileData []byte
-	switch content := collectionData.Content.(type) {
-	case *pb.CollectionData_Data:
-		fileData = content.Data
-	case *pb.CollectionData_Uri:
-		return fmt.Errorf("file stored as URI reference (large file), direct retrieval not yet supported")
-	default:
-		return fmt.Errorf("unknown content type in CollectionData")
+	var fileName string
+
+	// Handle different storage formats
+	if dataVal, ok := fileMap["data"]; ok {
+		switch v := dataVal.(type) {
+		case []byte:
+			fileData = v
+		case string:
+			// Try base64 decode first
+			if decoded, err := base64.StdEncoding.DecodeString(v); err == nil {
+				fileData = decoded
+			} else {
+				// If not base64, treat as raw string
+				fileData = []byte(v)
+			}
+		default:
+			return fmt.Errorf("unexpected data type in file record")
+		}
+	} else {
+		return fmt.Errorf("file record missing 'data' field")
+	}
+
+	// Get file name
+	if nameVal, ok := fileMap["name"].(string); ok {
+		fileName = nameVal
+	} else if pathVal, ok := fileMap["path"].(string); ok {
+		fileName = filepath.Base(pathVal)
+	} else {
+		fileName = filepath.Base(getFilePath)
 	}
 
 	// Determine output path
 	outputPath := getFileOutput
 	if outputPath == "" {
-		if collectionData.Name != "" {
-			outputPath = collectionData.Name
-		} else {
-			outputPath = filepath.Base(getFilePath)
-		}
+		outputPath = fileName
 	}
 
 	// Write file

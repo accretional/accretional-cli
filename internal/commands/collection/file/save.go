@@ -1,6 +1,7 @@
 package file
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	pb "github.com/accretional/collector/gen/collector"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var (
@@ -50,18 +52,27 @@ func runSaveFile(cmd *cobra.Command, args []string) error {
 	// Get file name from local path
 	fileName := filepath.Base(saveFileLocalPath)
 
-	// Create CollectionData message
-	collectionData := &pb.CollectionData{
-		Name: fileName,
-		Content: &pb.CollectionData_Data{
-			Data: fileData,
-		},
+	// Store file as a Struct record (since collections are typically configured for Struct)
+	// We'll store file metadata and base64-encoded data in a JSON-like structure
+	fileRecord := map[string]interface{}{
+		"_type":    "file",
+		"name":     fileName,
+		"path":     saveFilePath,
+		"size":     len(fileData),
+		"data":     base64.StdEncoding.EncodeToString(fileData), // Base64 encode for JSON storage
+		"mimeType": "",                                          // Could detect MIME type if needed
 	}
 
-	// Convert CollectionData to Any
-	anyValue, err := anypb.New(collectionData)
+	// Convert to protobuf Struct
+	structValue, err := structpb.NewStruct(fileRecord)
 	if err != nil {
-		return fmt.Errorf("failed to create Any from CollectionData: %w", err)
+		return fmt.Errorf("failed to create Struct: %w", err)
+	}
+
+	// Create Any from Struct
+	anyValue, err := anypb.New(structValue)
+	if err != nil {
+		return fmt.Errorf("failed to create Any from Struct: %w", err)
 	}
 
 	// Create client
