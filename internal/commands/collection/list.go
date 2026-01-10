@@ -21,7 +21,7 @@ var (
 
 func NewListCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
+		Use:   "list-records",
 		Short: "List records in a collection",
 		Long:  "List records in a collection with optional filtering",
 		RunE:  runList,

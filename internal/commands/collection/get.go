@@ -22,7 +22,7 @@ var (
 
 func NewGetCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "get",
+		Use:   "get-record",
 		Short: "Get a record from a collection",
 		Long:  "Retrieve a record by ID from a collection",
 		RunE:  runGet,

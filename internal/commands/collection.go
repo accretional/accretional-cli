@@ -9,8 +9,8 @@ import (
 func NewCollectionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "collection",
-		Short: "Collection operations (create-collection, create, get, list, search)",
-		Long:  "Manage collections and records in Collector. Use 'create-collection' to create a collection, then 'create' to add records.",
+		Short: "Collection operations (create, create-record, get-record, list-records, search)",
+		Long:  "Manage collections and records in Collector. Use 'create' to create a collection, then 'create-record' to add records.",
 	}
 
 	cmd.AddCommand(collection.NewCreateCollectionCmd())

@@ -23,7 +23,7 @@ var (
 
 func NewCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create",
+		Use:   "create-record",
 		Short: "Create a record in a collection",
 		Long:  "Create a new record in a collection with JSON data",
 		RunE:  runCreate,
