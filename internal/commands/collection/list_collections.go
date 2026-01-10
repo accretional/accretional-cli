@@ -74,7 +74,6 @@ func runListCollections(cmd *cobra.Command, args []string) error {
 
 	for i, coll := range resp.Collections {
 		cmd.Printf("[%d] %s/%s\n", i+1, coll.Namespace, coll.Name)
-		cmd.Printf("    ID: %s\n", coll.Id)
 		if coll.MessageType != nil {
 			cmd.Printf("    Type: %s/%s\n",
 				coll.MessageType.Namespace,

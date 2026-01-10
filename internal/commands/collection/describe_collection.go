@@ -63,7 +63,6 @@ func runDescribeCollection(cmd *cobra.Command, args []string) error {
 	// Display collection information
 	cmd.Printf("Collection: %s/%s\n", describeCollectionNamespace, describeCollectionName)
 	if resp.CollectionDefinition != nil {
-		cmd.Printf("  ID: %s\n", resp.CollectionDefinition.Id)
 		if resp.CollectionDefinition.MessageType != nil {
 			cmd.Printf("  Message Type: %s/%s\n",
 				resp.CollectionDefinition.MessageType.Namespace,
