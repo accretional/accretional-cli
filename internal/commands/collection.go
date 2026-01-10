@@ -25,7 +25,15 @@ Record Operations:
   list-records  - List records in a collection
   update-record - Update an existing record
   delete-record - Delete a record
-  search        - Search records (FTS, semantic, or hybrid)`,
+  search        - Search records (FTS, semantic, or hybrid)
+
+File Operations:
+  save-file     - Save a standalone file to a collection
+  get-file      - Get a standalone file from a collection
+  delete-file   - Delete a standalone file from a collection
+  attach-file   - Attach a file to a record
+  detach-file   - Detach a file from a record
+  list-files    - List files (attached to record or standalone)`,
 	}
 
 	// Collection commands
@@ -42,6 +50,14 @@ Record Operations:
 	cmd.AddCommand(collection.NewUpdateRecordCmd())
 	cmd.AddCommand(collection.NewDeleteRecordCmd())
 	cmd.AddCommand(collection.NewSearchRecordsCmd())
+
+	// File commands
+	cmd.AddCommand(collection.NewSaveFileCmd())
+	cmd.AddCommand(collection.NewGetFileCmd())
+	cmd.AddCommand(collection.NewDeleteFileCmd())
+	cmd.AddCommand(collection.NewAttachFileCmd())
+	cmd.AddCommand(collection.NewDetachFileCmd())
+	cmd.AddCommand(collection.NewListFilesCmd())
 
 	return cmd
 }
