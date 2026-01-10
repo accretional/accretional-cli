@@ -8,6 +8,7 @@ import (
 	"github.com/accretional/accretional-cli/internal/client"
 	pb "github.com/accretional/collector/gen/collector"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -64,24 +65,20 @@ func runGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("get failed: %w", err)
 	}
 
-	if resp.Status.Code != pb.Status_OK {
-		return fmt.Errorf("get failed: %s", resp.Status.Message)
-	}
-
 	// Convert Any to JSON
 	var jsonData []byte
 	if resp.Item != nil {
-		// Try to unmarshal as Struct
+		// Try to unmarshal the raw bytes as a Struct (ignoring TypeUrl)
 		var structVal structpb.Struct
-		if err := resp.Item.UnmarshalTo(&structVal); err == nil {
+		if err := proto.Unmarshal(resp.Item.Value, &structVal); err == nil {
 			// Convert Struct to JSON
 			jsonData, err = json.MarshalIndent(structVal.AsMap(), "", "  ")
 			if err != nil {
 				return fmt.Errorf("failed to marshal to JSON: %w", err)
 			}
 		} else {
-			// If not a Struct, just print the raw value
-			jsonData = []byte(fmt.Sprintf("{\"type\": \"%s\", \"value\": \"%s\"}", resp.Item.TypeUrl, string(resp.Item.Value)))
+			// If not a Struct, just print the raw value info
+			jsonData = []byte(fmt.Sprintf("{\"type\": \"%s\", \"raw_length\": %d}", resp.Item.TypeUrl, len(resp.Item.Value)))
 		}
 	}
 

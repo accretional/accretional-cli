@@ -102,10 +102,6 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("create failed: %w", err)
 	}
 
-	if resp.Status.Code != pb.Status_OK {
-		return fmt.Errorf("create failed: %s", resp.Status.Message)
-	}
-
 	cmd.Printf("✓ Record created successfully\n")
 	cmd.Printf("  ID: %s\n", resp.Id)
 	cmd.Printf("  Collection: %s/%s\n", createNamespace, createCollection)

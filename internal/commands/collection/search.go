@@ -1,11 +1,14 @@
 package collection
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/accretional/accretional-cli/internal/client"
 	pb "github.com/accretional/collector/gen/collector"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var (
@@ -62,18 +65,20 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("search failed: %w", err)
 	}
 
-	if resp.Status.Code != pb.Status_OK {
-		return fmt.Errorf("search failed: %s", resp.Status.Message)
-	}
-
 	// Print results
-	cmd.Printf("Found %d result(s) for '%s'\n", resp.TotalCount, searchQuery)
+	cmd.Printf("Found %d result(s) for '%s'\n", len(resp.Results), searchQuery)
 	cmd.Println()
 
 	for i, result := range resp.Results {
-		cmd.Printf("[%d] Score: %.2f\n", i+1, result.Score)
+		cmd.Printf("[%d] Score: %g\n", i+1, result.Score)
 		if result.Item != nil {
-			cmd.Printf("  Type: %s\n", result.Item.TypeUrl)
+			var structVal structpb.Struct
+			if err := proto.Unmarshal(result.Item.Value, &structVal); err == nil {
+				jsonData, _ := json.MarshalIndent(structVal.AsMap(), "", "  ")
+				cmd.Println(string(jsonData))
+			} else {
+				cmd.Printf("  Type: %s\n", result.Item.TypeUrl)
+			}
 		}
 		cmd.Println()
 	}

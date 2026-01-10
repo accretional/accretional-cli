@@ -7,6 +7,7 @@ import (
 	"github.com/accretional/accretional-cli/internal/client"
 	pb "github.com/accretional/collector/gen/collector"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -75,18 +76,14 @@ func runList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("list failed: %w", err)
 	}
 
-	if resp.Status.Code != pb.Status_OK {
-		return fmt.Errorf("list failed: %s", resp.Status.Message)
-	}
-
 	// Print results
-	cmd.Printf("Found %d record(s)\n", resp.TotalCount)
+	cmd.Printf("Found %d record(s)\n", len(resp.Items))
 	cmd.Println()
 
 	for i, item := range resp.Items {
 		var jsonData []byte
 		var structVal structpb.Struct
-		if err := item.UnmarshalTo(&structVal); err == nil {
+		if err := proto.Unmarshal(item.Value, &structVal); err == nil {
 			jsonData, _ = json.MarshalIndent(structVal.AsMap(), "", "  ")
 		} else {
 			jsonData = []byte(fmt.Sprintf("{\"type\": \"%s\"}", item.TypeUrl))
