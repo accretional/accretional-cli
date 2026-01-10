@@ -2,11 +2,17 @@ package collection
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/accretional/accretional-cli/internal/client"
 	pb "github.com/accretional/collector/gen/collector"
 	"github.com/spf13/cobra"
 )
+
+// contains checks if a string contains a substring (case-insensitive)
+func contains(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
 
 var (
 	deleteCollectionEndpoint  string
@@ -54,6 +60,12 @@ func runDeleteCollection(cmd *cobra.Command, args []string) error {
 	repoClient := pb.NewCollectionRepoClient(cl.Conn())
 	resp, err := repoClient.DeleteCollection(cmd.Context(), req)
 	if err != nil {
+		// Check if it's an "Unimplemented" error (method not registered)
+		if err.Error() != "" && (contains(err.Error(), "not registered") || contains(err.Error(), "Unimplemented")) {
+			return fmt.Errorf("delete collection failed: DeleteCollection method is not registered on the server.\n"+
+				"This is a server-side limitation. The method exists in the proto but needs to be registered in the registry.\n"+
+				"Original error: %w", err)
+		}
 		return fmt.Errorf("delete collection failed: %w", err)
 	}
 
