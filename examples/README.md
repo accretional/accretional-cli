@@ -10,6 +10,7 @@ This directory contains comprehensive examples of all available CLI commands, or
 - **[Collection Operations](collections.md)** - Create, list, describe, modify, and delete collections
 - **[Record Operations](records.md)** - CRUD operations and search for records
 - **[File Operations](files.md)** - Standalone files and file attachments
+- **[Registry & Service Discovery](registry.md)** - Service registration, type management, and service mesh connections
 
 ## Quick Start
 
@@ -95,5 +96,6 @@ Most commands support:
 | **Collections** | `create`, `list`, `describe`, `modify`, `delete` |
 | **Records** | `create-record`, `get-record`, `list-records`, `update-record`, `delete-record`, `search` |
 | **Files** | `save-file`, `get-file`, `delete-file`, `attach-file`, `detach-file`, `list-files` |
+| **Registry** | `upload-proto`, `list-types`, `get-type`, `register-service`, `list-services`, `get-service`, `add-connection`, `list-connections`, `remove-connection`, `discover`, `route` |
 
 For detailed examples, see the individual documentation files linked above.

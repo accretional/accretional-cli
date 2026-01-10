@@ -12,9 +12,10 @@ func main() {
 		Long:  "Command-line interface for interacting with Collector services",
 	}
 
-	// Add collection subcommand
+	// Add subcommands
 	rootCmd.AddCommand(commands.NewCollectionCmd())
 	rootCmd.AddCommand(commands.NewServerCmd())
+	rootCmd.AddCommand(commands.NewRegistryCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		rootCmd.PrintErrln(err)
