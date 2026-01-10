@@ -168,11 +168,11 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	for i, result := range resp.Results {
 		cmd.Printf("[%d]", i+1)
-		if result.Score > 0 {
-			cmd.Printf(" Relevance Score: %.4f", result.Score)
+		if searchQuery != "" {
+			cmd.Printf(" Score: %g", result.Score)
 		}
 		if result.Distance > 0 {
-			cmd.Printf(" Distance: %.4f", result.Distance)
+			cmd.Printf(" Distance: %g", result.Distance)
 		}
 		cmd.Println()
 

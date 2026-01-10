@@ -93,9 +93,9 @@ func runCreateCollection(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("create collection failed: %w", err)
 	}
 
-	// Check status
-	if resp.Status != nil && resp.Status.Code != 0 {
-		return fmt.Errorf("create collection failed: %s", resp.Status.Message)
+	// Check status - OK = 0, so any non-zero code is an error
+	if resp.Status != nil && resp.Status.Code != pb.Status_OK {
+		return fmt.Errorf("create collection failed: %s (code: %d)", resp.Status.Message, resp.Status.Code)
 	}
 
 	cmd.Printf("✓ Collection created successfully\n")
