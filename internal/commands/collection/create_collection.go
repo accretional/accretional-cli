@@ -9,12 +9,16 @@ import (
 )
 
 var (
-	createCollectionEndpoint  string
-	createCollectionNamespace string
-	createCollectionName      string
-	createCollectionTypeNS    string
-	createCollectionTypeName  string
-	createCollectionIndexed   []string
+	createCollectionEndpoint     string
+	createCollectionNamespace    string
+	createCollectionName         string
+	createCollectionTypeNS       string
+	createCollectionTypeName     string
+	createCollectionIndexed      []string
+	createCollectionEnableFTS    bool
+	createCollectionEnableJSON   bool
+	createCollectionEnableVector bool
+	createCollectionVectorDims   int32
 )
 
 func NewCreateCollectionCmd() *cobra.Command {
@@ -38,6 +42,12 @@ search may not work correctly.`,
 	cmd.Flags().StringVar(&createCollectionTypeNS, "type-namespace", "google.protobuf", "Message type namespace (default: google.protobuf for JSON data)")
 	cmd.Flags().StringVar(&createCollectionTypeName, "type-name", "Struct", "Message type name (default: Struct for JSON data)")
 	cmd.Flags().StringArrayVar(&createCollectionIndexed, "indexed-field", []string{}, "Fields to index (can be specified multiple times)")
+
+	// Search configuration flags
+	cmd.Flags().BoolVar(&createCollectionEnableFTS, "enable-fts", true, "Enable full-text search (FTS5)")
+	cmd.Flags().BoolVar(&createCollectionEnableJSON, "enable-json", true, "Enable JSON field extraction and filtering")
+	cmd.Flags().BoolVar(&createCollectionEnableVector, "enable-vector", false, "Enable vector/semantic search")
+	cmd.Flags().Int32Var(&createCollectionVectorDims, "vector-dimensions", 384, "Vector dimensions for semantic search (required if enable-vector is true)")
 
 	cmd.MarkFlagRequired("name")
 
@@ -79,6 +89,26 @@ func runCreateCollection(cmd *cobra.Command, args []string) error {
 	// Add indexed fields if provided
 	if len(createCollectionIndexed) > 0 {
 		collection.IndexedFields = createCollectionIndexed
+	}
+
+	// Set SearchConfig if any search options are specified
+	if createCollectionEnableFTS || createCollectionEnableJSON || createCollectionEnableVector {
+		searchConfig := &pb.SearchConfig{
+			EnableFts:        createCollectionEnableFTS,
+			EnableJson:       createCollectionEnableJSON,
+			EnableVector:     createCollectionEnableVector,
+			VectorDimensions: createCollectionVectorDims,
+			EmbedderType:     pb.EmbedderType_EMBEDDER_DETERMINISTIC,
+		}
+
+		// Validate vector config
+		if createCollectionEnableVector && createCollectionVectorDims <= 0 {
+			return fmt.Errorf("vector-dimensions must be > 0 when enable-vector is true")
+		}
+
+		collection.CollectionConfig = &pb.CollectionConfig{
+			SearchConfig: searchConfig,
+		}
 	}
 
 	// Create request
