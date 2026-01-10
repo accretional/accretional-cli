@@ -20,7 +20,7 @@ var (
 	getOutput     string
 )
 
-func NewGetCmd() *cobra.Command {
+func NewGetRecordCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get-record",
 		Short: "Get a record from a collection",

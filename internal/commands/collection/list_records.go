@@ -19,7 +19,7 @@ var (
 	listFilter     string
 )
 
-func NewListCmd() *cobra.Command {
+func NewListRecordsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list-records",
 		Short: "List records in a collection",

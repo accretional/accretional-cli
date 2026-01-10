@@ -21,7 +21,7 @@ var (
 	searchLimit               int32
 )
 
-func NewSearchCmd() *cobra.Command {
+func NewSearchRecordsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "search",
 		Short: "Search records in a collection",

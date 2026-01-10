@@ -21,7 +21,7 @@ var (
 	createFile       string
 )
 
-func NewCreateCmd() *cobra.Command {
+func NewCreateRecordCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create-record",
 		Short: "Create a record in a collection",
