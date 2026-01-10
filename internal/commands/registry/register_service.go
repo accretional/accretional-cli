@@ -46,8 +46,8 @@ The service descriptor can be provided via a proto file or built manually from m
 }
 
 func runRegisterService(cmd *cobra.Command, args []string) error {
-	var serviceDesc *pb.ServiceDescriptorProto
-	var fileDesc *pb.FileDescriptorProto
+	var serviceDesc *descriptorpb.ServiceDescriptorProto
+	var fileDesc *descriptorpb.FileDescriptorProto
 
 	// If proto file is provided, parse it to extract service descriptor
 	if registerServiceProtoFile != "" {

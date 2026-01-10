@@ -6,6 +6,8 @@ import (
 	"github.com/accretional/accretional-cli/internal/client"
 	pb "github.com/accretional/collector/gen/collector"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 var (
@@ -63,13 +65,15 @@ func runRemoveConnection(cmd *cobra.Command, args []string) error {
 	// Find connection by address
 	var connectionID string
 	for _, item := range listResp.Items {
-		// Try to unmarshal as Connection to check address
-		// For now, we'll search by record ID pattern or require the full connection ID
-		// This is a simplified implementation
-		if item.Id != "" {
-			// If address matches part of the ID or we can extract it
-			// For a complete implementation, we'd need to unmarshal and check the address field
-			connectionID = item.Id
+		// Unmarshal *any.Any to Connection
+		conn := &pb.Connection{}
+		if err := anypb.UnmarshalTo(item, conn, proto.UnmarshalOptions{}); err != nil {
+			continue
+		}
+
+		// Check if address matches
+		if conn.Address == removeConnectionAddress {
+			connectionID = conn.Id
 			break
 		}
 	}

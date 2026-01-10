@@ -6,6 +6,8 @@ import (
 	"github.com/accretional/accretional-cli/internal/client"
 	pb "github.com/accretional/collector/gen/collector"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -45,7 +47,7 @@ func runListConnections(cmd *cobra.Command, args []string) error {
 	collectionClient := pb.NewCollectionServiceClient(cl.Conn())
 
 	// Build filter if namespace is specified
-	var filter *pb.Struct
+	var filter *structpb.Struct
 	if listConnectionsNamespace != "" {
 		filterMap := map[string]interface{}{
 			"shared_namespaces": listConnectionsNamespace,
@@ -86,12 +88,25 @@ func runListConnections(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	cmd.Println("Note: Connection details are stored in system/connections collection.")
-	cmd.Println("      Use 'collection get-record --collection connections --id' to view full details.")
-	cmd.Println()
 	cmd.Println("Connection records:")
 	for i, item := range listResp.Items {
-		cmd.Printf("  [%d] Record ID: %s\n", i+1, item.Id)
+		// Unmarshal *any.Any to Connection
+		conn := &pb.Connection{}
+		if err := anypb.UnmarshalTo(item, conn, proto.UnmarshalOptions{}); err != nil {
+			cmd.Printf("  [%d] Failed to unmarshal connection: %v\n", i+1, err)
+			continue
+		}
+
+		cmd.Printf("  [%d] %s\n", i+1, conn.Id)
+		cmd.Printf("       Address: %s\n", conn.Address)
+		cmd.Printf("       Status: %s\n", conn.Status.String())
+		if len(conn.SharedNamespaces) > 0 {
+			cmd.Printf("       Namespaces: %v\n", conn.SharedNamespaces)
+		}
+		if conn.TargetCollectorId != "" {
+			cmd.Printf("       Target Collector: %s\n", conn.TargetCollectorId)
+		}
+		cmd.Println()
 	}
 
 	return nil

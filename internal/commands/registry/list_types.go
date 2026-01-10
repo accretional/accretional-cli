@@ -6,6 +6,8 @@ import (
 	"github.com/accretional/accretional-cli/internal/client"
 	pb "github.com/accretional/collector/gen/collector"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 var (
@@ -75,12 +77,24 @@ func runListTypes(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	cmd.Println("Note: Type details are stored in system/types collection.")
-	cmd.Println("      Use 'collection get-record' to view full type information.")
-	cmd.Println()
 	cmd.Println("Registered type records:")
 	for i, item := range listResp.Items {
-		cmd.Printf("  [%d] Record ID: %s\n", i+1, item.Id)
+		// Unmarshal *any.Any to RegisteredProto
+		regProto := &pb.RegisteredProto{}
+		if err := anypb.UnmarshalTo(item, regProto, proto.UnmarshalOptions{}); err != nil {
+			cmd.Printf("  [%d] Failed to unmarshal type: %v\n", i+1, err)
+			continue
+		}
+
+		cmd.Printf("  [%d] %s\n", i+1, regProto.Id)
+		cmd.Printf("       Namespace: %s\n", regProto.Namespace)
+		if len(regProto.MessageNames) > 0 {
+			cmd.Printf("       Messages (%d): %v\n", len(regProto.MessageNames), regProto.MessageNames)
+		}
+		if len(regProto.Dependencies) > 0 {
+			cmd.Printf("       Dependencies: %v\n", regProto.Dependencies)
+		}
+		cmd.Println()
 	}
 
 	return nil
