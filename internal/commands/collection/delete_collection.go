@@ -63,7 +63,6 @@ func runDeleteCollection(cmd *cobra.Command, args []string) error {
 		// Check if it's an "Unimplemented" error (method not registered)
 		if err.Error() != "" && (contains(err.Error(), "not registered") || contains(err.Error(), "Unimplemented")) {
 			return fmt.Errorf("delete collection failed: DeleteCollection method is not registered on the server.\n"+
-				"This is a server-side limitation. The method exists in the proto but needs to be registered in the registry.\n"+
 				"Original error: %w", err)
 		}
 		return fmt.Errorf("delete collection failed: %w", err)
