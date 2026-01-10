@@ -14,11 +14,12 @@ import (
 )
 
 var (
-	saveFileEndpoint   string
-	saveFileNamespace  string
-	saveFileCollection string
-	saveFilePath       string
-	saveFileLocalPath  string
+	saveFileEndpoint    string
+	saveFileNamespace   string
+	saveFileCollection  string
+	saveFilePath        string
+	saveFileLocalPath   string
+	saveFileExtractText bool
 )
 
 func NewSaveFileCmd() *cobra.Command {
@@ -34,6 +35,7 @@ func NewSaveFileCmd() *cobra.Command {
 	cmd.Flags().StringVar(&saveFileCollection, "collection", "", "Collection name (required)")
 	cmd.Flags().StringVar(&saveFilePath, "path", "", "File path in collection (required)")
 	cmd.Flags().StringVar(&saveFileLocalPath, "file", "", "Local file path to upload (required)")
+	cmd.Flags().BoolVar(&saveFileExtractText, "extract-text", false, "Extract text content for searchability (FTS and semantic search)")
 
 	cmd.MarkFlagRequired("collection")
 	cmd.MarkFlagRequired("path")
@@ -52,15 +54,36 @@ func runSaveFile(cmd *cobra.Command, args []string) error {
 	// Get file name from local path
 	fileName := filepath.Base(saveFileLocalPath)
 
+	// Extract text content from file (only if flag is set)
+	var textContent string
+	var mimeType string
+	if saveFileExtractText {
+		var err error
+		textContent, mimeType, err = extractTextFromFile(fileData, fileName)
+		if err != nil {
+			// Log warning but continue - file will be stored but not searchable
+			cmd.Printf("Warning: Could not extract text content: %v\n", err)
+			mimeType = "application/octet-stream"
+		}
+	} else {
+		// Detect MIME type from extension without extracting text
+		mimeType = detectMimeType(fileName)
+	}
+
 	// Store file as a Struct record (since collections are typically configured for Struct)
-	// We'll store file metadata and base64-encoded data in a JSON-like structure
+	// We'll store file metadata, base64-encoded data, and extracted text content
 	fileRecord := map[string]interface{}{
 		"_type":    "file",
 		"name":     fileName,
 		"path":     saveFilePath,
 		"size":     len(fileData),
 		"data":     base64.StdEncoding.EncodeToString(fileData), // Base64 encode for JSON storage
-		"mimeType": "",                                          // Could detect MIME type if needed
+		"mimeType": mimeType,
+	}
+
+	// Add text content if extraction was successful (for FTS and semantic search)
+	if textContent != "" {
+		fileRecord["content"] = textContent
 	}
 
 	// Convert to protobuf Struct
@@ -112,6 +135,14 @@ func runSaveFile(cmd *cobra.Command, args []string) error {
 	cmd.Printf("  Path: %s\n", saveFilePath)
 	cmd.Printf("  Record ID: %s\n", resp.Id)
 	cmd.Printf("  Size: %d bytes\n", len(fileData))
+	cmd.Printf("  MIME Type: %s\n", mimeType)
+	if textContent != "" {
+		cmd.Printf("  Text Content: Extracted (%d characters)\n", len(textContent))
+		cmd.Printf("  Searchable: Yes (FTS and semantic search enabled)\n")
+	} else {
+		cmd.Printf("  Text Content: Not extracted (binary file or unsupported format)\n")
+		cmd.Printf("  Searchable: No (only metadata searchable)\n")
+	}
 	cmd.Printf("  Collection: %s/%s\n", saveFileNamespace, saveFileCollection)
 
 	return nil

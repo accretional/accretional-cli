@@ -15,12 +15,13 @@ import (
 )
 
 var (
-	attachFileEndpoint   string
-	attachFileNamespace  string
-	attachFileCollection string
-	attachFileRecordID   string
-	attachFileLocalPath  string
-	attachFilePath       string
+	attachFileEndpoint    string
+	attachFileNamespace   string
+	attachFileCollection  string
+	attachFileRecordID    string
+	attachFileLocalPath   string
+	attachFilePath        string
+	attachFileExtractText bool
 )
 
 func NewAttachFileCmd() *cobra.Command {
@@ -37,6 +38,7 @@ func NewAttachFileCmd() *cobra.Command {
 	cmd.Flags().StringVar(&attachFileRecordID, "record-id", "", "Record ID to attach file to (required)")
 	cmd.Flags().StringVar(&attachFileLocalPath, "file", "", "Local file path to attach (required)")
 	cmd.Flags().StringVar(&attachFilePath, "path", "", "File path in collection (optional, auto-generated if not provided)")
+	cmd.Flags().BoolVar(&attachFileExtractText, "extract-text", false, "Extract text content for searchability (FTS and semantic search)")
 
 	cmd.MarkFlagRequired("collection")
 	cmd.MarkFlagRequired("record-id")
@@ -68,6 +70,22 @@ func runAttachFile(cmd *cobra.Command, args []string) error {
 	// Get file name from local path
 	fileName := filepath.Base(filePath)
 
+	// Extract text content from file (only if flag is set)
+	var textContent string
+	var mimeType string
+	if attachFileExtractText {
+		var err error
+		textContent, mimeType, err = extractTextFromFile(fileData, fileName)
+		if err != nil {
+			// Log warning but continue - file will be stored but not searchable
+			cmd.Printf("Warning: Could not extract text content: %v\n", err)
+			mimeType = "application/octet-stream"
+		}
+	} else {
+		// Detect MIME type from extension without extracting text
+		mimeType = detectMimeType(fileName)
+	}
+
 	// Generate file path if not provided
 	if attachFilePath == "" {
 		attachFilePath = fmt.Sprintf("attachments/%s/%s", attachFileRecordID, fileName)
@@ -90,7 +108,12 @@ func runAttachFile(cmd *cobra.Command, args []string) error {
 		"path":     attachFilePath,
 		"size":     len(fileData),
 		"data":     base64.StdEncoding.EncodeToString(fileData), // Base64 encode for JSON storage
-		"mimeType": "",                                          // Could detect MIME type if needed
+		"mimeType": mimeType,
+	}
+
+	// Add text content if extraction was successful (for FTS and semantic search)
+	if textContent != "" {
+		fileRecord["content"] = textContent
 	}
 
 	// Convert to protobuf Struct
@@ -190,6 +213,14 @@ func runAttachFile(cmd *cobra.Command, args []string) error {
 	cmd.Printf("  File Path: %s\n", attachFilePath)
 	cmd.Printf("  File Record ID: %s\n", fileRecordID)
 	cmd.Printf("  Size: %d bytes\n", len(fileData))
+	cmd.Printf("  MIME Type: %s\n", mimeType)
+	if textContent != "" {
+		cmd.Printf("  Text Content: Extracted (%d characters)\n", len(textContent))
+		cmd.Printf("  Searchable: Yes (FTS and semantic search enabled)\n")
+	} else {
+		cmd.Printf("  Text Content: Not extracted (binary file or unsupported format)\n")
+		cmd.Printf("  Searchable: No (only metadata searchable)\n")
+	}
 	cmd.Printf("  Collection: %s/%s\n", attachFileNamespace, attachFileCollection)
 
 	return nil
