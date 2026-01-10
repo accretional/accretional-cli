@@ -2,6 +2,8 @@ package commands
 
 import (
 	"github.com/accretional/accretional-cli/internal/commands/collection"
+	"github.com/accretional/accretional-cli/internal/commands/collection/file"
+	"github.com/accretional/accretional-cli/internal/commands/collection/record"
 	"github.com/spf13/cobra"
 )
 
@@ -44,20 +46,20 @@ File Operations:
 	cmd.AddCommand(collection.NewDeleteCollectionCmd())
 
 	// Record commands
-	cmd.AddCommand(collection.NewCreateRecordCmd())
-	cmd.AddCommand(collection.NewGetRecordCmd())
-	cmd.AddCommand(collection.NewListRecordsCmd())
-	cmd.AddCommand(collection.NewUpdateRecordCmd())
-	cmd.AddCommand(collection.NewDeleteRecordCmd())
-	cmd.AddCommand(collection.NewSearchRecordsCmd())
+	cmd.AddCommand(record.NewCreateRecordCmd())
+	cmd.AddCommand(record.NewGetRecordCmd())
+	cmd.AddCommand(record.NewListRecordsCmd())
+	cmd.AddCommand(record.NewUpdateRecordCmd())
+	cmd.AddCommand(record.NewDeleteRecordCmd())
+	cmd.AddCommand(record.NewSearchRecordsCmd())
 
 	// File commands
-	cmd.AddCommand(collection.NewSaveFileCmd())
-	cmd.AddCommand(collection.NewGetFileCmd())
-	cmd.AddCommand(collection.NewDeleteFileCmd())
-	cmd.AddCommand(collection.NewAttachFileCmd())
-	cmd.AddCommand(collection.NewDetachFileCmd())
-	cmd.AddCommand(collection.NewListFilesCmd())
+	cmd.AddCommand(file.NewSaveFileCmd())
+	cmd.AddCommand(file.NewGetFileCmd())
+	cmd.AddCommand(file.NewDeleteFileCmd())
+	cmd.AddCommand(file.NewAttachFileCmd())
+	cmd.AddCommand(file.NewDetachFileCmd())
+	cmd.AddCommand(file.NewListFilesCmd())
 
 	return cmd
 }
