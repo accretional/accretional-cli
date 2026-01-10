@@ -14,6 +14,7 @@ func main() {
 
 	// Add collection subcommand
 	rootCmd.AddCommand(commands.NewCollectionCmd())
+	rootCmd.AddCommand(commands.NewServerCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		rootCmd.PrintErrln(err)
