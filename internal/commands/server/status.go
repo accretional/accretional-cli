@@ -55,30 +55,6 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	collections := discoverResp.Collections
 	collectionCount := len(collections)
 
-	// Count total records across all collections
-	var totalRecords int64
-	var totalSize int64
-
-	for _, coll := range collections {
-		// Get collection info
-		describeReq := &pb.DescribeRequest{
-			Namespace:      coll.Namespace,
-			CollectionName: coll.Name,
-		}
-
-		describeResp, err := repoClient.Describe(ctx, describeReq)
-		if err != nil {
-			// Skip collections that can't be described
-			continue
-		}
-
-		if describeResp.CollectionDefinition != nil {
-			// Try to get record count from metadata if available
-			// Note: The actual record count might not be directly available
-			// We'll show what we can gather
-		}
-	}
-
 	// Display status
 	cmd.Printf("Server Status\n")
 	cmd.Printf("=============\n")
@@ -98,12 +74,11 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		for i, coll := range collections {
 			cmd.Printf("  [%d] %s/%s\n", i+1, coll.Namespace, coll.Name)
 		}
+		cmd.Printf("\nNote: Use 'collection describe' to get detailed statistics\n")
+		cmd.Printf("      (record counts, storage size) for individual collections.\n")
+	} else {
+		cmd.Printf("\nNo collections found.\n")
 	}
-
-	// Note: Record counts and storage size would require additional RPC calls
-	// or server-side metadata that may not be available yet
-	cmd.Printf("\nNote: Detailed statistics (record counts, storage size) require\n")
-	cmd.Printf("      additional server-side support or individual collection queries.\n")
 
 	return nil
 }
