@@ -19,7 +19,7 @@ var (
 	attachFileNamespace  string
 	attachFileCollection string
 	attachFileRecordID   string
-	attachFileLocalPath   string
+	attachFileLocalPath  string
 	attachFilePath       string
 )
 
@@ -46,14 +46,27 @@ func NewAttachFileCmd() *cobra.Command {
 }
 
 func runAttachFile(cmd *cobra.Command, args []string) error {
+	// Get flag value directly from command (in case of binding issues)
+	filePath, err := cmd.Flags().GetString("file")
+	if err != nil {
+		return fmt.Errorf("failed to get file flag: %w", err)
+	}
+	if filePath == "" {
+		// Fallback to variable if flag retrieval fails
+		filePath = attachFileLocalPath
+	}
+	if filePath == "" {
+		return fmt.Errorf("file path is required")
+	}
+
 	// Read the local file
-	fileData, err := os.ReadFile(attachFileLocalPath)
+	fileData, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)
 	}
 
 	// Get file name from local path
-	fileName := filepath.Base(attachFileLocalPath)
+	fileName := filepath.Base(filePath)
 
 	// Generate file path if not provided
 	if attachFilePath == "" {
@@ -77,7 +90,7 @@ func runAttachFile(cmd *cobra.Command, args []string) error {
 		"path":     attachFilePath,
 		"size":     len(fileData),
 		"data":     base64.StdEncoding.EncodeToString(fileData), // Base64 encode for JSON storage
-		"mimeType": "", // Could detect MIME type if needed
+		"mimeType": "",                                          // Could detect MIME type if needed
 	}
 
 	// Convert to protobuf Struct
@@ -130,7 +143,7 @@ func runAttachFile(cmd *cobra.Command, args []string) error {
 	// Try to unmarshal as Struct first (most common case for JSON records)
 	var existingData structpb.Struct
 	var recordMap map[string]interface{}
-	
+
 	if err := proto.Unmarshal(getResp.Item.Value, &existingData); err == nil {
 		// Successfully unmarshaled as Struct
 		recordMap = existingData.AsMap()
@@ -141,7 +154,7 @@ func runAttachFile(cmd *cobra.Command, args []string) error {
 		cmd.Printf("Warning: Record is not a Struct type. Creating new record with data_uri.\n")
 		recordMap = make(map[string]interface{})
 	}
-	
+
 	// Add data_uri to the record
 	recordMap["data_uri"] = fileRecordID
 
