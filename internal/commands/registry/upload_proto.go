@@ -47,8 +47,16 @@ func runUploadProto(cmd *cobra.Command, args []string) error {
 	}
 
 	// Parse proto file
+	absProtoFile, err := filepath.Abs(uploadProtoFile)
+	if err != nil {
+		return fmt.Errorf("failed to resolve absolute path: %w", err)
+	}
+
+	protoDir := filepath.Dir(absProtoFile)
+	protoBase := filepath.Base(absProtoFile)
+
 	parser := protoparse.Parser{
-		ImportPaths: []string{filepath.Dir(uploadProtoFile)},
+		ImportPaths: []string{protoDir},
 	}
 
 	// Add custom import paths if provided
@@ -56,7 +64,8 @@ func runUploadProto(cmd *cobra.Command, args []string) error {
 		parser.ImportPaths = append(parser.ImportPaths, uploadProtoImportPath)
 	}
 
-	fileDescs, err := parser.ParseFiles(uploadProtoFile)
+	// ParseFiles expects relative paths when ImportPaths is set
+	fileDescs, err := parser.ParseFiles(protoBase)
 	if err != nil {
 		return fmt.Errorf("failed to parse proto file: %w", err)
 	}

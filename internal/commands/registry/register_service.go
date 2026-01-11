@@ -57,8 +57,16 @@ func runRegisterService(cmd *cobra.Command, args []string) error {
 		}
 
 		// Parse proto file
+		absProtoFile, err := filepath.Abs(registerServiceProtoFile)
+		if err != nil {
+			return fmt.Errorf("failed to resolve absolute path: %w", err)
+		}
+
+		protoDir := filepath.Dir(absProtoFile)
+		protoBase := filepath.Base(absProtoFile)
+
 		parser := protoparse.Parser{
-			ImportPaths: []string{filepath.Dir(registerServiceProtoFile)},
+			ImportPaths: []string{protoDir},
 		}
 
 		// Add custom import paths if provided
@@ -66,7 +74,8 @@ func runRegisterService(cmd *cobra.Command, args []string) error {
 			parser.ImportPaths = append(parser.ImportPaths, registerServiceImportPath)
 		}
 
-		fileDescs, err := parser.ParseFiles(registerServiceProtoFile)
+		// ParseFiles expects relative paths when ImportPaths is set
+		fileDescs, err := parser.ParseFiles(protoBase)
 		if err != nil {
 			return fmt.Errorf("failed to parse proto file: %w", err)
 		}
