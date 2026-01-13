@@ -1,4 +1,4 @@
-package collection
+package get
 
 import (
 	"encoding/json"
@@ -13,26 +13,26 @@ import (
 )
 
 var (
-	getEndpoint   string
-	getNamespace  string
-	getCollection string
-	getID         string
-	getOutput     string
+	recordEndpoint   string
+	recordNamespace  string
+	recordCollection string
+	recordID         string
+	recordOutput     string
 )
 
-func NewGetCmd() *cobra.Command {
+func NewRecordCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "get",
+		Use:   "record",
 		Short: "Get a record from a collection",
 		Long:  "Retrieve a record by ID from a collection",
-		RunE:  runGet,
+		RunE:  runGetRecord,
 	}
 
-	cmd.Flags().StringVar(&getEndpoint, "endpoint", "localhost:50051", "gRPC server endpoint")
-	cmd.Flags().StringVar(&getNamespace, "namespace", "shared", "Namespace")
-	cmd.Flags().StringVar(&getCollection, "collection", "", "Collection name (required)")
-	cmd.Flags().StringVar(&getID, "id", "", "Record ID (required)")
-	cmd.Flags().StringVar(&getOutput, "output", "", "Output file (optional, prints to stdout if not provided)")
+	cmd.Flags().StringVar(&recordEndpoint, "endpoint", "localhost:50051", "gRPC server endpoint")
+	cmd.Flags().StringVar(&recordNamespace, "namespace", "shared", "Namespace")
+	cmd.Flags().StringVar(&recordCollection, "collection", "", "Collection name (required)")
+	cmd.Flags().StringVar(&recordID, "id", "", "Record ID (required)")
+	cmd.Flags().StringVar(&recordOutput, "output", "", "Output file (optional, prints to stdout if not provided)")
 
 	cmd.MarkFlagRequired("collection")
 	cmd.MarkFlagRequired("id")
@@ -40,10 +40,10 @@ func NewGetCmd() *cobra.Command {
 	return cmd
 }
 
-func runGet(cmd *cobra.Command, args []string) error {
+func runGetRecord(cmd *cobra.Command, args []string) error {
 	// Create client
 	cl, err := client.New(client.Config{
-		Endpoint: getEndpoint,
+		Endpoint: recordEndpoint,
 		Insecure: true,
 	})
 	if err != nil {
@@ -53,9 +53,9 @@ func runGet(cmd *cobra.Command, args []string) error {
 
 	// Create request
 	req := &pb.GetRequest{
-		Namespace:      getNamespace,
-		CollectionName: getCollection,
-		Id:             getID,
+		Namespace:      recordNamespace,
+		CollectionName: recordCollection,
+		Id:             recordID,
 	}
 
 	// Call Get
@@ -83,11 +83,11 @@ func runGet(cmd *cobra.Command, args []string) error {
 	}
 
 	// Output
-	if getOutput != "" {
-		if err := os.WriteFile(getOutput, jsonData, 0644); err != nil {
+	if recordOutput != "" {
+		if err := os.WriteFile(recordOutput, jsonData, 0644); err != nil {
 			return fmt.Errorf("failed to write output: %w", err)
 		}
-		cmd.Printf("✓ Record retrieved and saved to %s\n", getOutput)
+		cmd.Printf("✓ Record retrieved and saved to %s\n", recordOutput)
 	} else {
 		cmd.Println(string(jsonData))
 	}

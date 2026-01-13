@@ -1,4 +1,4 @@
-package collection
+package search
 
 import (
 	"encoding/json"
@@ -15,48 +15,48 @@ import (
 )
 
 var (
-	searchEndpoint            string
-	searchNamespace           string
-	searchCollection          string
-	searchQuery               string
-	searchVectorStr           string
-	searchVectorFile          string
-	searchSimilarityThreshold float32
-	searchLimit               int32
+	recordsEndpoint            string
+	recordsNamespace           string
+	recordsCollection          string
+	recordsQuery               string
+	recordsVectorStr           string
+	recordsVectorFile          string
+	recordsSimilarityThreshold float32
+	recordsLimit               int32
 )
 
-func NewSearchCmd() *cobra.Command {
+func NewRecordsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "search",
+		Use:   "records",
 		Short: "Search records in a collection",
 		Long:  "Search records using full-text search (FTS), vector similarity, or hybrid search",
-		RunE:  runSearch,
+		RunE:  runSearchRecords,
 	}
 
-	cmd.Flags().StringVar(&searchEndpoint, "endpoint", "localhost:50051", "gRPC server endpoint")
-	cmd.Flags().StringVar(&searchNamespace, "namespace", "shared", "Namespace")
-	cmd.Flags().StringVar(&searchCollection, "collection", "", "Collection name (required)")
-	cmd.Flags().StringVar(&searchQuery, "query", "", "Full-text search query (optional, use with --vector for hybrid search)")
-	cmd.Flags().StringVar(&searchVectorStr, "vector", "", "Comma or space-separated vector values for vector search")
-	cmd.Flags().StringVar(&searchVectorFile, "vector-file", "", "JSON file containing vector array for vector search")
-	cmd.Flags().Float32Var(&searchSimilarityThreshold, "similarity-threshold", 0.0, "Minimum similarity threshold for vector search (0.0-1.0)")
-	cmd.Flags().Int32Var(&searchLimit, "limit", 10, "Maximum number of results")
+	cmd.Flags().StringVar(&recordsEndpoint, "endpoint", "localhost:50051", "gRPC server endpoint")
+	cmd.Flags().StringVar(&recordsNamespace, "namespace", "shared", "Namespace")
+	cmd.Flags().StringVar(&recordsCollection, "collection", "", "Collection name (required)")
+	cmd.Flags().StringVar(&recordsQuery, "query", "", "Full-text search query (optional, use with --vector for hybrid search)")
+	cmd.Flags().StringVar(&recordsVectorStr, "vector", "", "Comma or space-separated vector values for vector search")
+	cmd.Flags().StringVar(&recordsVectorFile, "vector-file", "", "JSON file containing vector array for vector search")
+	cmd.Flags().Float32Var(&recordsSimilarityThreshold, "similarity-threshold", 0.0, "Minimum similarity threshold for vector search (0.0-1.0)")
+	cmd.Flags().Int32Var(&recordsLimit, "limit", 10, "Maximum number of results")
 
 	cmd.MarkFlagRequired("collection")
 
 	return cmd
 }
 
-func runSearch(cmd *cobra.Command, args []string) error {
+func runSearchRecords(cmd *cobra.Command, args []string) error {
 	// Validate that at least one search method is provided
-	if searchQuery == "" && searchVectorFile == "" && searchVectorStr == "" {
+	if recordsQuery == "" && recordsVectorFile == "" && recordsVectorStr == "" {
 		return fmt.Errorf("either --query (FTS), --vector, or --vector-file must be provided")
 	}
 
 	// Parse vector from string, file, or use empty
 	var vector []float32
-	if searchVectorFile != "" {
-		data, err := os.ReadFile(searchVectorFile)
+	if recordsVectorFile != "" {
+		data, err := os.ReadFile(recordsVectorFile)
 		if err != nil {
 			return fmt.Errorf("failed to read vector file: %w", err)
 		}
@@ -88,9 +88,9 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		for i, v := range vectorArray {
 			vector[i] = float32(v)
 		}
-	} else if searchVectorStr != "" {
+	} else if recordsVectorStr != "" {
 		// Parse comma or space-separated values
-		parts := strings.FieldsFunc(searchVectorStr, func(r rune) bool {
+		parts := strings.FieldsFunc(recordsVectorStr, func(r rune) bool {
 			return r == ',' || r == ' '
 		})
 		vector = make([]float32, 0, len(parts))
@@ -109,7 +109,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	// Create client
 	cl, err := client.New(client.Config{
-		Endpoint: searchEndpoint,
+		Endpoint: recordsEndpoint,
 		Insecure: true,
 	})
 	if err != nil {
@@ -119,21 +119,21 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	// Create request
 	req := &pb.SearchRequest{
-		Namespace:      searchNamespace,
-		CollectionName: searchCollection,
-		Limit:          searchLimit,
+		Namespace:      recordsNamespace,
+		CollectionName: recordsCollection,
+		Limit:          recordsLimit,
 	}
 
 	// Add full-text search if provided
-	if searchQuery != "" {
-		req.FullText = searchQuery
+	if recordsQuery != "" {
+		req.FullText = recordsQuery
 	}
 
 	// Add vector search if provided
 	if len(vector) > 0 {
 		req.Vector = vector
-		if searchSimilarityThreshold > 0 {
-			req.SimilarityThreshold = searchSimilarityThreshold
+		if recordsSimilarityThreshold > 0 {
+			req.SimilarityThreshold = recordsSimilarityThreshold
 		}
 	}
 
@@ -146,7 +146,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	// Print results
 	searchType := "search"
-	if searchQuery != "" && len(vector) > 0 {
+	if recordsQuery != "" && len(vector) > 0 {
 		searchType = "hybrid (FTS + vector)"
 	} else if len(vector) > 0 {
 		searchType = "vector"
@@ -155,20 +155,20 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	}
 
 	cmd.Printf("Found %d result(s) (%s search)\n", len(resp.Results), searchType)
-	if searchQuery != "" {
-		cmd.Printf("Query: '%s'\n", searchQuery)
+	if recordsQuery != "" {
+		cmd.Printf("Query: '%s'\n", recordsQuery)
 	}
 	if len(vector) > 0 {
 		cmd.Printf("Vector dimension: %d\n", len(vector))
-		if searchSimilarityThreshold > 0 {
-			cmd.Printf("Similarity threshold: %.3f\n", searchSimilarityThreshold)
+		if recordsSimilarityThreshold > 0 {
+			cmd.Printf("Similarity threshold: %.3f\n", recordsSimilarityThreshold)
 		}
 	}
 	cmd.Println()
 
 	for i, result := range resp.Results {
 		cmd.Printf("[%d]", i+1)
-		if searchQuery != "" {
+		if recordsQuery != "" {
 			cmd.Printf(" Score: %g", result.Score)
 		}
 		if result.Distance > 0 {

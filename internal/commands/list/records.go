@@ -1,4 +1,4 @@
-package collection
+package list
 
 import (
 	"encoding/json"
@@ -12,36 +12,36 @@ import (
 )
 
 var (
-	listEndpoint   string
-	listNamespace  string
-	listCollection string
-	listPageSize   int32
-	listFilter     string
+	recordsEndpoint   string
+	recordsNamespace  string
+	recordsCollection string
+	recordsPageSize   int32
+	recordsFilter     string
 )
 
-func NewListCmd() *cobra.Command {
+func NewRecordsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
+		Use:   "records",
 		Short: "List records in a collection",
 		Long:  "List records in a collection with optional filtering",
-		RunE:  runList,
+		RunE:  runListRecords,
 	}
 
-	cmd.Flags().StringVar(&listEndpoint, "endpoint", "localhost:50051", "gRPC server endpoint")
-	cmd.Flags().StringVar(&listNamespace, "namespace", "shared", "Namespace")
-	cmd.Flags().StringVar(&listCollection, "collection", "", "Collection name (required)")
-	cmd.Flags().Int32Var(&listPageSize, "page-size", 10, "Number of records per page")
-	cmd.Flags().StringVar(&listFilter, "filter", "", "JSON filter (optional)")
+	cmd.Flags().StringVar(&recordsEndpoint, "endpoint", "localhost:50051", "gRPC server endpoint")
+	cmd.Flags().StringVar(&recordsNamespace, "namespace", "shared", "Namespace")
+	cmd.Flags().StringVar(&recordsCollection, "collection", "", "Collection name (required)")
+	cmd.Flags().Int32Var(&recordsPageSize, "page-size", 10, "Number of records per page")
+	cmd.Flags().StringVar(&recordsFilter, "filter", "", "JSON filter (optional)")
 
 	cmd.MarkFlagRequired("collection")
 
 	return cmd
 }
 
-func runList(cmd *cobra.Command, args []string) error {
+func runListRecords(cmd *cobra.Command, args []string) error {
 	// Create client
 	cl, err := client.New(client.Config{
-		Endpoint: listEndpoint,
+		Endpoint: recordsEndpoint,
 		Insecure: true,
 	})
 	if err != nil {
@@ -51,15 +51,15 @@ func runList(cmd *cobra.Command, args []string) error {
 
 	// Create request
 	req := &pb.ListRequest{
-		Namespace:      listNamespace,
-		CollectionName: listCollection,
-		PageSize:       listPageSize,
+		Namespace:      recordsNamespace,
+		CollectionName: recordsCollection,
+		PageSize:       recordsPageSize,
 	}
 
 	// Add filter if provided
-	if listFilter != "" {
+	if recordsFilter != "" {
 		var filterMap map[string]interface{}
-		if err := json.Unmarshal([]byte(listFilter), &filterMap); err != nil {
+		if err := json.Unmarshal([]byte(recordsFilter), &filterMap); err != nil {
 			return fmt.Errorf("invalid filter JSON: %w", err)
 		}
 		filterStruct, err := structpb.NewStruct(filterMap)

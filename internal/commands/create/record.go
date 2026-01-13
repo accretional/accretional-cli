@@ -1,4 +1,4 @@
-package collection
+package create
 
 import (
 	"encoding/json"
@@ -13,45 +13,45 @@ import (
 )
 
 var (
-	createEndpoint   string
-	createNamespace  string
-	createCollection string
-	createID         string
-	createData       string
-	createFile       string
+	recordEndpoint   string
+	recordNamespace  string
+	recordCollection string
+	recordID         string
+	recordData       string
+	recordFile       string
 )
 
-func NewCreateCmd() *cobra.Command {
+func NewRecordCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create",
+		Use:   "record",
 		Short: "Create a record in a collection",
 		Long:  "Create a new record in a collection with JSON data",
-		RunE:  runCreate,
+		RunE:  runCreateRecord,
 	}
 
-	cmd.Flags().StringVar(&createEndpoint, "endpoint", "localhost:50051", "gRPC server endpoint")
-	cmd.Flags().StringVar(&createNamespace, "namespace", "shared", "Namespace")
-	cmd.Flags().StringVar(&createCollection, "collection", "", "Collection name (required)")
-	cmd.Flags().StringVar(&createID, "id", "", "Record ID (optional, auto-generated if not provided)")
-	cmd.Flags().StringVar(&createData, "data", "", "JSON data for the record")
-	cmd.Flags().StringVar(&createFile, "file", "", "JSON file containing record data")
+	cmd.Flags().StringVar(&recordEndpoint, "endpoint", "localhost:50051", "gRPC server endpoint")
+	cmd.Flags().StringVar(&recordNamespace, "namespace", "shared", "Namespace")
+	cmd.Flags().StringVar(&recordCollection, "collection", "", "Collection name (required)")
+	cmd.Flags().StringVar(&recordID, "id", "", "Record ID (optional, auto-generated if not provided)")
+	cmd.Flags().StringVar(&recordData, "data", "", "JSON data for the record")
+	cmd.Flags().StringVar(&recordFile, "file", "", "JSON file containing record data")
 
 	cmd.MarkFlagRequired("collection")
 
 	return cmd
 }
 
-func runCreate(cmd *cobra.Command, args []string) error {
+func runCreateRecord(cmd *cobra.Command, args []string) error {
 	// Get data from either --data or --file
 	var jsonData string
-	if createFile != "" {
-		data, err := os.ReadFile(createFile)
+	if recordFile != "" {
+		data, err := os.ReadFile(recordFile)
 		if err != nil {
 			return fmt.Errorf("failed to read file: %w", err)
 		}
 		jsonData = string(data)
-	} else if createData != "" {
-		jsonData = createData
+	} else if recordData != "" {
+		jsonData = recordData
 	} else {
 		return fmt.Errorf("either --data or --file must be provided")
 	}
@@ -76,7 +76,7 @@ func runCreate(cmd *cobra.Command, args []string) error {
 
 	// Create client
 	cl, err := client.New(client.Config{
-		Endpoint: createEndpoint,
+		Endpoint: recordEndpoint,
 		Insecure: true,
 	})
 	if err != nil {
@@ -86,13 +86,13 @@ func runCreate(cmd *cobra.Command, args []string) error {
 
 	// Create request
 	req := &pb.CreateRequest{
-		Namespace:      createNamespace,
-		CollectionName: createCollection,
+		Namespace:      recordNamespace,
+		CollectionName: recordCollection,
 		Item:           anyValue,
 	}
 
-	if createID != "" {
-		req.Id = createID
+	if recordID != "" {
+		req.Id = recordID
 	}
 
 	// Call Create
@@ -104,7 +104,7 @@ func runCreate(cmd *cobra.Command, args []string) error {
 
 	cmd.Printf("✓ Record created successfully\n")
 	cmd.Printf("  ID: %s\n", resp.Id)
-	cmd.Printf("  Collection: %s/%s\n", createNamespace, createCollection)
+	cmd.Printf("  Collection: %s/%s\n", recordNamespace, recordCollection)
 
 	return nil
 }

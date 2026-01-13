@@ -10,62 +10,71 @@ go install github.com/accretional/accretional-cli/cmd/accretional@latest
 
 ## Usage
 
-### Collection Operations
+### Create a collection
 
-#### Create a record
+```bash
+accretional create collection \
+  --endpoint localhost:50051 \
+  --namespace shared \
+  --name users \
+  --indexed-field email \
+  --indexed-field name
+```
+
+### Create a record
 
 ```bash
 # From JSON string
-accretional collection create \
+accretional create record \
   --endpoint localhost:50051 \
   --namespace shared \
   --collection users \
   --data '{"name": "Alice", "email": "alice@example.com"}'
 
 # From JSON file
-accretional collection create \
+accretional create record \
   --endpoint localhost:50051 \
   --collection users \
   --file ./user.json \
   --id user-123
 ```
 
-#### Get a record
+### Get a record
 
 ```bash
-accretional collection get \
+accretional get record \
   --endpoint localhost:50051 \
   --collection users \
   --id user-123
 
 # Save to file
-accretional collection get \
+accretional get record \
   --endpoint localhost:50051 \
   --collection users \
   --id user-123 \
   --output ./user.json
 ```
 
-#### List records
+### List records
 
 ```bash
 # List all records
-accretional collection list \
+accretional list records \
   --endpoint localhost:50051 \
   --collection users
 
 # With filter
-accretional collection list \
+accretional list records \
   --endpoint localhost:50051 \
   --collection users \
   --filter '{"status": "active"}' \
   --page-size 20
 ```
 
-#### Search records
+### Search records
 
 ```bash
-accretional collection search \
+accretional search records \
   --endpoint localhost:50051 \
   --collection users \
   --query "alice" \
@@ -84,7 +93,7 @@ go mod tidy
 go build ./cmd/accretional
 
 # Run
-./accretional file --help
+./accretional --help
 ```
 
 ### Dependencies
@@ -95,12 +104,13 @@ go build ./cmd/accretional
 
 ## Commands
 
-- `collection create` - Create a new record
-- `collection get` - Get a record by ID
-- `collection list` - List records with optional filtering
-- `collection search` - Full-text search records
+- `create collection` - Create a new collection
+- `create record` - Create a new record in a collection
+- `get record` - Get a record by ID
+- `list records` - List records with optional filtering
+- `search records` - Full-text search records
 
 All commands support:
 - `--endpoint` - gRPC server endpoint (default: localhost:50051)
 - `--namespace` - Namespace (default: shared)
-- `--collection` - Collection name (required)
+- `--collection` - Collection name (required for record operations)
