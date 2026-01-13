@@ -1,0 +1,4 @@
+accretional
+*.log
+logs/
+.log/

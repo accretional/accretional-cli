@@ -1,13 +1,7 @@
 package client
 
 import (
-	"context"
-	"log"
-	"time"
-
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/timeout"
+	"github.com/accretional/accretional-cli/internal/interceptors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -16,47 +10,42 @@ import (
 type Config struct {
 	Endpoint string
 	Insecure bool
+	Interceptors interceptors.Config
+}
+
+// DefaultConfig returns a Config with sensible defaults for the given endpoint.
+func DefaultConfig(endpoint string) Config {
+	return Config{
+		Endpoint:     endpoint,
+		Insecure:     true,
+		Interceptors: interceptors.DefaultConfig(),
+	}
 }
 
 // Client wraps a gRPC connection to Collector
 type Client struct {
-	conn   *grpc.ClientConn
-	config Config
+	conn    *grpc.ClientConn
+	config  Config
+	metrics *interceptors.Metrics
 }
 
-// interceptorLogger adapts standard log to interceptor logger
-func interceptorLogger() logging.Logger {
-	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
-		log.Printf("[%s] %s %v", lvl, msg, fields)
-	})
-}
-
-// New creates a new Collector client with middleware
 func New(config Config) (*Client, error) {
+	// Use default interceptor config if not specified
+	if config.Interceptors.Timeout == 0 {
+		config.Interceptors = interceptors.DefaultConfig()
+	}
+
+	metrics := interceptors.NewMetrics()
+
+	// Build interceptor arrays
+	unaryInterceptors := interceptors.NewUnaryInterceptors(config.Interceptors, metrics)
+	streamInterceptors := interceptors.NewStreamInterceptors(config.Interceptors)
+
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 
-		// Client middleware
-		grpc.WithUnaryInterceptor(logging.UnaryClientInterceptor(
-			interceptorLogger(),
-			logging.WithLogOnEvents(logging.StartCall, logging.FinishCall),
-		)),
-		grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor(
-			retry.WithMax(3),
-			retry.WithPerRetryTimeout(2*time.Second),
-			retry.WithBackoff(retry.BackoffExponential(100*time.Millisecond)),
-		)),
-		grpc.WithUnaryInterceptor(timeout.UnaryClientInterceptor(30 * time.Second)),
-
-		// Stream interceptors
-		grpc.WithStreamInterceptor(logging.StreamClientInterceptor(
-			interceptorLogger(),
-			logging.WithLogOnEvents(logging.StartCall, logging.FinishCall),
-		)),
-		grpc.WithStreamInterceptor(retry.StreamClientInterceptor(
-			retry.WithMax(3),
-			retry.WithPerRetryTimeout(2*time.Second),
-		)),
+		grpc.WithChainUnaryInterceptor(unaryInterceptors...),
+		grpc.WithChainStreamInterceptor(streamInterceptors...),
 	}
 
 	conn, err := grpc.NewClient(config.Endpoint, opts...)
@@ -65,14 +54,20 @@ func New(config Config) (*Client, error) {
 	}
 
 	return &Client{
-		conn:   conn,
-		config: config,
+		conn:    conn,
+		config:  config,
+		metrics: metrics,
 	}, nil
 }
 
 // Conn returns the underlying gRPC connection
 func (c *Client) Conn() *grpc.ClientConn {
 	return c.conn
+}
+
+// Metrics returns the client's metrics collector
+func (c *Client) Metrics() *interceptors.Metrics {
+	return c.metrics
 }
 
 // Close closes the gRPC connection

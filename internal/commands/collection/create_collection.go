@@ -23,20 +23,16 @@ func NewCreateCollectionCmd() *cobra.Command {
 		Short: "Create a new collection",
 		Long: `Create a new collection in the specified namespace.
 
-For JSON data (using 'create' command with --data), you should specify:
-  --type-namespace "google.protobuf"
-  --type-name "Struct"
-
-This enables JSON conversion for search functionality. Without a message type,
-search may not work correctly.`,
+By default, collections are created without a message type (untyped).
+For typed collections, specify --type-namespace and --type-name.`,
 		RunE: runCreateCollection,
 	}
 
 	cmd.Flags().StringVar(&createCollectionEndpoint, "endpoint", "localhost:50051", "gRPC server endpoint")
 	cmd.Flags().StringVar(&createCollectionNamespace, "namespace", "shared", "Namespace")
 	cmd.Flags().StringVar(&createCollectionName, "name", "", "Collection name (required)")
-	cmd.Flags().StringVar(&createCollectionTypeNS, "type-namespace", "google.protobuf", "Message type namespace (default: google.protobuf for JSON data)")
-	cmd.Flags().StringVar(&createCollectionTypeName, "type-name", "Struct", "Message type name (default: Struct for JSON data)")
+	cmd.Flags().StringVar(&createCollectionTypeNS, "type-namespace", "", "Message type namespace (optional)")
+	cmd.Flags().StringVar(&createCollectionTypeName, "type-name", "", "Message type name (optional, leave empty for untyped collections)")
 	cmd.Flags().StringArrayVar(&createCollectionIndexed, "indexed-field", []string{}, "Fields to index (can be specified multiple times)")
 
 	cmd.MarkFlagRequired("name")
@@ -61,18 +57,10 @@ func runCreateCollection(cmd *cobra.Command, args []string) error {
 		Name:      createCollectionName,
 	}
 
-	// Always set message type (defaults to google.protobuf.Struct for JSON data)
-	// This is required for JSON conversion to work, which enables search functionality
 	if createCollectionTypeName != "" {
 		collection.MessageType = &pb.MessageTypeRef{
 			Namespace:   createCollectionTypeNS,
 			MessageName: createCollectionTypeName,
-		}
-	} else {
-		// Default to google.protobuf.Struct for JSON data
-		collection.MessageType = &pb.MessageTypeRef{
-			Namespace:   "google.protobuf",
-			MessageName: "Struct",
 		}
 	}
 
@@ -93,8 +81,8 @@ func runCreateCollection(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("create collection failed: %w", err)
 	}
 
-	// Check status - OK = 0, so any non-zero code is an error
-	if resp.Status != nil && resp.Status.Code != pb.Status_OK {
+	// Check status - accept both 0 (proto enum OK) and 200 (HTTP-style OK)
+	if resp.Status != nil && resp.Status.Code != pb.Status_OK && resp.Status.Code != 200 {
 		return fmt.Errorf("create collection failed: %s (code: %d)", resp.Status.Message, resp.Status.Code)
 	}
 
